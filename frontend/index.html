@@ -1,114 +1,62 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Futurehuman</title>
+<title>Futurehuman — the AI that remembers your work</title><meta name="description" content="Futurehuman builds a private memory of your screen, meetings and apps, then answers, drafts and reminds you at the right moment.">
 <style>
-:root{--bk:#0B0B0B;--pk:#FF2DA8;--ch:#D4FF3F;--bg2:#151515;--bd:#2a2a2a;--tx:#f3f3f1;--mu:#9a9a96;color-scheme:dark}
-*{box-sizing:border-box}body{margin:0;background:var(--bk);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-h1,h2,h3{font-family:Georgia,serif;font-weight:500;margin:0}.w{max-width:1000px;margin:0 auto;padding:0 18px}
-header{border-bottom:1px solid var(--bd);position:sticky;top:0;background:rgba(11,11,11,.92);z-index:9}header .w{display:flex;justify-content:space-between;align-items:center;height:56px}
-.logo{font-family:Georgia,serif;font-size:19px}.logo b{color:var(--pk);font-weight:500}
-.btn{background:var(--ch);color:#0B0B0B;border:0;border-radius:999px;padding:9px 18px;font-weight:600;cursor:pointer}.btn.p{background:var(--pk);color:#fff}.btn.g{background:none;color:var(--tx);border:1px solid var(--bd)}.btn.s{padding:4px 11px;font-size:12px}
-input,textarea,select{background:#0B0B0B;color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font:inherit;width:100%}input:focus,textarea:focus,select:focus{outline:2px solid var(--pk)}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.row>*{flex:1;min-width:130px}.row>.btn{flex:0 0 auto}
-.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--bd);margin:14px 0}.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mu);padding:12px 16px;cursor:pointer;white-space:nowrap}.tabs .on{color:var(--ch);border-color:var(--pk)}
-.pane{display:none}.pane.on{display:block}.mem{border:1px solid var(--bd);background:var(--bg2);border-radius:12px;padding:13px;margin:9px 0}.mem.old{opacity:.5}
-.meta{color:var(--mu);font-size:12px;margin-top:6px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}.tag{background:#222;color:var(--ch);border-radius:6px;padding:1px 8px}.tag.k{color:var(--pk)}
-.ans{border-left:3px solid var(--pk);padding-left:13px;margin:14px 0}.mu{color:var(--mu);font-size:13px}.pink{color:var(--pk)}.good{color:var(--ch)}
-#auth{max-width:380px;margin:12vh auto;padding:0 18px}#auth .mem{padding:24px}#auth h1{font-size:30px;margin-bottom:6px}#app{display:none}
-#fl{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:50}
-#fb{width:54px;height:54px;border-radius:50%;border:0;background:var(--pk);color:#fff;font-size:21px;cursor:pointer;box-shadow:0 8px 28px rgba(255,45,168,.45)}
-#fp{display:none;position:absolute;right:0;bottom:66px;width:min(380px,calc(100vw - 36px));max-height:70vh;overflow:auto;background:rgba(17,17,17,.96);backdrop-filter:blur(12px);border:1px solid var(--pk);border-radius:18px;padding:14px}#fp.on{display:block}
-#toasts{position:fixed;top:68px;right:16px;z-index:60;display:flex;flex-direction:column;gap:10px;max-width:330px}.toast{background:#111;border:1px solid var(--ch);border-radius:14px;padding:13px}
-pre{white-space:pre-wrap;font:inherit;margin:6px 0}
+:root{--bk:#0B0B0B;--pk:#FF2DA8;--ch:#D4FF3F;--bg2:#151515;--bd:#262626;--tx:#f3f3f1;--mu:#9a9a96;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:72px}body{margin:0;background:var(--bk);color:var(--tx);font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:-.015em;margin:0}a{color:inherit}.w{max-width:1100px;margin:0 auto;padding:0 22px}
+nav{position:sticky;top:0;z-index:20;background:rgba(11,11,11,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd)}nav .w{display:flex;align-items:center;justify-content:space-between;height:62px}
+.logo{font-family:Georgia,serif;font-size:21px;text-decoration:none}.logo b{color:var(--pk);font-weight:500}nav .l a{color:var(--mu);text-decoration:none;margin-right:24px;font-size:14px}nav .l a:hover{color:var(--ch)}
+.btn{display:inline-block;background:var(--ch);color:#0B0B0B;border-radius:999px;padding:12px 24px;font-weight:600;font-size:15px;text-decoration:none}.btn:hover{background:#e6ff80}.btn.g{background:none;color:var(--tx);border:1px solid var(--bd)}.btn.s{padding:8px 18px;font-size:14px}
+.hero{padding:88px 0 40px;text-align:center}.pill{display:inline-block;border:1px solid var(--bd);color:var(--ch);border-radius:999px;padding:4px 14px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:24px}
+.hero h1{font-size:clamp(40px,7vw,76px);line-height:1.04;max-width:880px;margin:0 auto 22px}.hero h1 em{font-style:normal;color:var(--pk)}.hero p.lead{color:var(--mu);font-size:20px;max-width:620px;margin:0 auto 32px}.hero .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.note{color:var(--mu);font-size:13px;margin-top:14px}
+.win{max-width:900px;margin:56px auto 0;background:var(--bg2);border:1px solid var(--bd);border-radius:20px;text-align:left;overflow:hidden;box-shadow:0 30px 80px rgba(255,45,168,.12)}
+.bar{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--bd);background:#101010}.bar i{width:11px;height:11px;border-radius:50%;background:#333}.tabs{display:flex;gap:4px;margin-left:16px}
+.tabs button{background:none;border:0;color:var(--mu);padding:2px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:14px}.tabs .on{color:#0B0B0B;background:var(--ch)}
+.scr{display:none;padding:24px;min-height:300px}.scr.on{display:block}.ln{margin:0 0 12px;font-size:15px}.ln b{color:var(--mu);font-weight:500;margin-right:6px}
+.chip{display:inline-block;background:#1f1f1f;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin:4px 6px 4px 0;font-size:14px}.chip b{color:var(--ch)}.chip.p b{color:var(--pk)}.mu{color:var(--mu)}
+section{padding:84px 0}h2{font-size:clamp(30px,4.5vw,46px);line-height:1.1;margin-bottom:14px}.sub{color:var(--mu);max-width:620px;margin:0 0 36px}.center{text-align:center}.center .sub{margin-left:auto;margin-right:auto}
+.trust{display:flex;gap:10px 28px;justify-content:center;flex-wrap:wrap;color:var(--mu);font-size:14px;padding:30px 0;border-block:1px solid var(--bd)}.trust span::before{content:"✓ ";color:var(--ch)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}.split.r>:first-child{order:2}.card{background:var(--bg2);border:1px solid var(--bd);border-radius:18px;padding:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.grid .card h3{font-size:21px;margin:6px 0}.grid .card p{margin:0;color:var(--mu);font-size:15px}.n{color:var(--ch);font-size:12px;letter-spacing:.1em}
+kbd{border:1px solid #3a3a3a;border-radius:6px;padding:1px 8px;font-size:13px;background:#1a1a1a}
+details{border-bottom:1px solid var(--bd);padding:18px 0}summary{cursor:pointer;font-size:18px}details p{color:var(--mu);margin:10px 0 0}
+.final{text-align:center;background:linear-gradient(180deg,#0B0B0B,#1a0a14);border-top:1px solid var(--bd)}footer{padding:30px 0;color:var(--mu);font-size:13px;border-top:1px solid var(--bd)}
+@media(max-width:800px){.split{grid-template-columns:1fr;gap:28px}.split.r>:first-child{order:0}nav .l a{display:none}.hero{padding-top:56px}}
 </style></head><body>
-<div id="auth"><div class="mem"><h1>future<span class="pink">human</span></h1><p class="mu">Your personal AI memory. Sign in or create an account.</p>
-<input id="em" type="email" placeholder="Email" autocomplete="email"><div style="height:10px"></div><input id="pw" type="password" placeholder="Password (8+ characters)" autocomplete="current-password">
-<div class="row"><button class="btn" id="li">Sign in</button><button class="btn g" id="rg">Create account</button></div><div id="ae" class="pink"></div></div></div>
+<nav><div class="w"><a class="logo" href="#">future<b>human</b></a><div class="l"><a href="#how">How it works</a><a href="#features">Features</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a><a class="btn s" href="/app.html" style="margin:0">Open the app</a></div></div></nav>
 
-<div id="app"><header><div class="w"><span class="logo">future<b>human</b></span><span><span class="mu" id="who"></span> <button class="btn g s" id="lo">Sign out</button></span></div></header>
-<div class="w"><div class="tabs" id="tabs"><button data-t="ask" class="on">Ask memory</button><button data-t="tl">Timeline</button><button data-t="cap">Screen capture</button><button data-t="mt">Meetings</button><button data-t="br">Brief</button><button data-t="al">Alerts</button></div>
+<header class="hero w"><span class="pill">Free to try · Works in your browser today</span>
+<h1>The AI that <em>remembers</em> your work, so you don’t have to.</h1>
+<p class="lead">Futurehuman reads what’s on your screen, listens in your meetings and learns your commitments. Then it answers, drafts and reminds you at the right moment.</p>
+<div class="cta"><a class="btn" href="/app.html">Start free in your browser</a><a class="btn g" href="#how">See how it works</a></div>
+<p class="note">Desktop app for macOS and Windows is in development. No bot joins your calls.</p>
+<div class="win"><div class="bar"><i></i><i></i><i></i><div class="tabs" id="wt"><button class="on" data-s="s1">Meeting</button><button data-s="s2">Ask</button><button data-s="s3">Morning brief</button></div></div>
+<div class="scr on" id="s1"><p class="ln"><b>Dana:</b> The $38 seat price works, so let’s go ahead with the pilot.</p><p class="ln"><b>Dana:</b> Could you send the revised deck before Friday?</p><p class="ln"><b>You:</b> Yes. I’ll send the proposal by Friday, and let’s revisit pricing after interviews.</p>
+<p class="mu" style="font-size:13px;margin:18px 0 6px">Extracted live</p><span class="chip"><b>Commitment</b> You → send the proposal · Friday</span><span class="chip"><b>Decision</b> Go ahead with the pilot at $38/seat</span><span class="chip p"><b>Tentative</b> Revisit pricing after interviews</span><span class="chip"><b>Question</b> Revised deck before Friday?</span></div>
+<div class="scr" id="s2"><p class="ln"><b>You:</b> What did Dana ask for, and what have I done since?</p><p class="ln">Dana asked for the revised deck before Friday <span class="mu">[Gmail, Mon]</span>. Since then you edited “Pilot deck” on Tuesday, but nothing shows it was sent, so completion is <span style="color:var(--pk)">unverified</span>.</p><span class="chip">Gmail · Mon</span><span class="chip">Google Slides · Tue</span><span class="chip">Meeting · Wed</span></div>
+<div class="scr" id="s3"><p class="ln" style="font-family:Georgia,serif;font-size:22px">Good morning</p><p class="ln"><b>Birdseed</b> Send Dana the revised deck <span style="color:var(--pk)">due Friday</span></p><p class="ln"><b>Perch</b> Renewal quote requested before 11:00 call</p><p class="ln"><b>Sparrow</b> Kickoff notes to Quinn</p><span class="chip">3 items open · 14 captured yesterday</span></div></div></header>
 
-<div class="pane on" id="ask"><div class="row"><input id="q" placeholder="What did the investor ask for, and what progress have I made since?"><button class="btn" id="qb">Ask</button></div><div id="qa"></div></div>
+<div class="w"><div class="trust"><span>Text, not screenshots</span><span>No bot joins your calls</span><span>Never sends email on its own</span><span>Pause, edit or delete anytime</span></div></div>
 
-<div class="pane" id="tl"><div class="row"><select id="fa"></select><select id="fpe"></select><select id="fj"></select><select id="fd"><option value="0">All dates</option><option value="1">24h</option><option value="7">7 days</option></select></div>
-<details class="mem"><summary>Add a memory manually</summary><div class="row"><input id="mc" placeholder="e.g. Priya asked for the pricing sheet by Monday"><input id="mj" placeholder="Project"><button class="btn" id="ma">Save</button></div></details><div id="tlo"></div></div>
+<section id="how"><div class="w"><div class="center"><h2>It already knows the backstory</h2><p class="sub">Ask about a person or project and Futurehuman pulls from your screen, meetings and notes, then links the pieces across days.</p></div>
+<div class="grid"><div class="card"><span class="n">01</span><h3>Capture</h3><p>Reads changed screens on your device and keeps only the text and app context.</p></div><div class="card"><span class="n">02</span><h3>Remember</h3><p>Turns it into memories with people, projects, deadlines and confidence, linked over time.</p></div><div class="card"><span class="n">03</span><h3>Notice</h3><p>Scores what matters by relevance, urgency and confidence, and learns from what you dismiss.</p></div><div class="card"><span class="n">04</span><h3>Act</h3><p>Drafts the reply, builds the brief, suggests the next step. You stay in control.</p></div></div></div></section>
 
-<div class="pane" id="cap"><p class="mu">Share a window or screen. Frames are read on-device with OCR when they change; only extracted text is sent. No screenshots are stored or uploaded.</p>
-<div class="row"><input id="cj" placeholder="Project tag (optional)"><input id="ci" type="number" value="5" min="2" title="Seconds between samples"><button class="btn" id="cs">Start capture</button><button class="btn g" id="cx">Stop</button></div><div id="cst" class="mu">Idle.</div><div id="clog"></div></div>
+<section id="features" style="padding-top:0"><div class="w">
+<div class="split"><div><h2>Ask anything about your work</h2><p class="sub">Plain-language questions, answers with their evidence, and a clear line between what was recorded and what was inferred.</p><a class="btn g s" href="/app.html">Try Ask memory</a></div><div class="card"><p class="ln"><b class="mu">You</b> What did I decide about the roadmap?</p><p class="ln">Ship the floating AI before integrations. <span class="mu">[Notion, 4 days ago]</span></p><span class="chip">Evidence #5</span><span class="chip">Linked: Mohit’s prototype</span></div></div>
+<div class="split r" style="margin-top:84px"><div class="card"><p class="mu" style="margin:0 0 8px;font-size:13px">Draft ready · review before sending</p><p style="margin:0"><b>Subject:</b> Following up — Fundraising</p><p class="mu" style="margin:8px 0 0">Hi Ravi, following up on the updated deck. I’ll share it shortly. Happy to walk through it on a call.</p></div><div><h2>Follow-ups written for you</h2><p class="sub">Futurehuman drafts from what was said and sent. It never sends email on its own.</p></div></div>
+<div class="split" style="margin-top:84px"><div><h2>A morning brief, before you ask</h2><p class="sub">Every day, see what’s open by project, what’s overdue and what you captured yesterday.</p></div><div class="card"><p class="ln"><b style="color:var(--pk)">Overdue</b> Reply to Priya about pricing</p><p class="ln"><b class="mu">Today</b> Send the audit to Kim</p><p class="ln" style="margin:0"><b class="mu">Friday</b> Deck to Dana</p></div></div>
+<div class="split r" style="margin-top:84px"><div class="card center"><p style="font-size:44px;margin:0">✦</p><p class="mu" style="margin:0">Press <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd> or double-tap <kbd>Ctrl</kbd></p></div><div><h2>A floating AI over whatever you’re doing</h2><p class="sub">Ask a question or act on an alert without leaving your screen. Alerts only appear when the score clears your threshold.</p></div></div></div></section>
 
-<div class="pane" id="mt"><p class="mu">Uses your microphone (browser speech recognition, Chrome/Edge) or type lines below. Commitments are extracted live over a WebSocket.</p>
-<div class="row"><input id="mti" placeholder="Meeting title" value="Team sync"><input id="mpj" placeholder="Project"><button class="btn" id="mst">Start</button><button class="btn p" id="mfi">Finish &amp; summarise</button></div>
-<div class="row"><input id="msp" placeholder="Speaker" value="You"><input id="mx" placeholder="Type a line, e.g. I'll send the proposal by Friday."><button class="btn g" id="mse">Send</button><button class="btn g" id="mic">🎙 Mic</button></div>
-<div class="row" style="align-items:flex-start"><div><b>Live transcript</b><div id="mtr"></div></div><div><b class="good">Commitments &amp; decisions</b><div id="mco"></div></div></div><div id="msm"></div></div>
+<section id="privacy" style="background:var(--bg2);border-block:1px solid var(--bd)"><div class="w center"><h2>Your memory stays yours</h2><p class="sub">You decide what is kept and what is forgotten.</p>
+<div class="grid" style="text-align:left"><div class="card"><h3>Text only</h3><p>Screens are read on your device. No screenshots are uploaded or stored.</p></div><div class="card"><h3>Correct anything</h3><p>Edit a memory, mark it outdated, or delete it for good.</p></div><div class="card"><h3>No bots, no surprises</h3><p>Meetings are captured through your own device, not a bot that joins the call.</p></div><div class="card"><h3>You send, always</h3><p>Drafts are suggestions. Nothing goes out until you approve it.</p></div></div></div></section>
 
-<div class="pane" id="br"><div class="row"><select id="bp"></select><button class="btn" id="bb">Generate brief</button></div><div id="bo"></div></div>
+<section id="faq"><div class="w" style="max-width:760px"><h2 class="center">Questions</h2><br>
+<details><summary>What can I use today?</summary><p>The web app: accounts, screen capture from a shared window, meeting capture with your microphone, search, briefs, drafts and alerts. The macOS/Windows desktop app is in development.</p></details>
+<details><summary>Does a bot join my meetings?</summary><p>No. In the browser, Futurehuman hears your microphone. Capturing all participants needs the desktop app.</p></details>
+<details><summary>Does it send email for me?</summary><p>Never. It prepares drafts and you decide whether to send.</p></details>
+<details><summary>How does it decide when to interrupt me?</summary><p>Each candidate is scored on relevance, urgency and confidence, divided by your cognitive load. It only appears above your threshold, and learns from what you dismiss.</p></details></div></section>
 
-<div class="pane" id="al"><div class="row"><select id="ag"></select><input id="ath" type="number" step="0.05" value="0.78" title="Threshold"><button class="btn" id="ar">Refresh</button></div><p class="mu">Score = Relevance × Urgency × Confidence ÷ Cognitive overhead. Notifies at ≥ threshold.</p><div id="ao"></div></div></div></div>
-
-<div id="toasts"></div>
-<div id="fl"><div id="fp"><b class="pink">Floating AI</b> <span class="mu">Ctrl/⌘+K or double-tap Ctrl</span><div class="row"><input id="fq" placeholder="Ask without leaving your screen…"><button class="btn s" id="fg">Ask</button></div><div id="fo"></div></div><button id="fb" aria-label="Floating AI">✦</button></div>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script>
-const $=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let T=null;try{T=localStorage.getItem('fh_t')}catch(e){}
-const api=async(p,o={})=>{const r=await fetch('/api'+p,{method:o.m||(o.b?'POST':'GET'),headers:{'Content-Type':'application/json',Authorization:'Bearer '+T},body:o.b?JSON.stringify(o.b):undefined});const j=await r.json().catch(()=>({}));if(r.status==401){out();throw'Session expired'}if(!r.ok)throw j.detail||'Error';return j};
-const fd=t=>new Date(t*1000).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),dd=t=>new Date(t*1000).toLocaleDateString([], {day:'numeric',month:'short'});
-function auth(kind){fetch('/api/auth/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#em').value,password:$('#pw').value})}).then(r=>r.json().then(j=>{if(!r.ok)throw j.detail;T=j.token;try{localStorage.setItem('fh_t',T)}catch(e){}$('#who').textContent=$('#em').value;boot()})).catch(e=>$('#ae').textContent=typeof e=='string'?e:'Something went wrong')}
-$('#li').onclick=()=>auth('login');$('#rg').onclick=()=>auth('register');$('#pw').onkeydown=e=>e.key=='Enter'&&auth('login');
-function out(){T=null;try{localStorage.removeItem('fh_t')}catch(e){}location.reload()}$('#lo').onclick=out;
-function card(m,act){return `<div class="mem ${m.status=='outdated'?'old':''}"><div>${E(m.content)}</div><div class="meta"><span class="tag">${E(m.app)}</span><span>${fd(m.ts)}</span>${m.project?`<span class="tag">${E(m.project)}</span>`:''}${m.people.map(p=>`<span class="tag k">${E(p)}</span>`).join('')}${m.due?`<span class="pink">due ${dd(m.due)}</span>`:''}<span>conf ${Math.round(m.conf*100)}%</span><span>#${m.id}</span>${m.kind!='context'?`<span class="tag">${m.kind}</span>`:''}${m.links.length?`<span>links ${m.links.map(l=>'#'+l).join(' ')}</span>`:''}${m.status=='outdated'?'<span class="tag">outdated</span>':''}</div>${act?`<div class="meta"><button class="btn g s" data-a="ed" data-i="${m.id}">Correct</button><button class="btn g s" data-a="od" data-i="${m.id}" data-s="${m.status}">${m.status=='outdated'?'Mark current':'Mark outdated'}</button><button class="btn g s" data-a="rm" data-i="${m.id}">Delete</button></div>`:''}</div>`}
-const answer=async q=>{const r=await api('/ask',{b:{q}});let h=`<div class="ans"><b>${E(r.answer)}</b></div>`;if(r.progress)h+=`<div class="ans"><b>Activity since</b>${r.progress.recorded.map(m=>`<div class="mu">• ${E(m.content)} (#${m.id})</div>`).join('')}<p class="mu"><span class="good">Recorded:</span> items above. <span class="pink">Verdict:</span> ${E(r.progress.verdict)}</p></div>`;return h+(r.sources.length?'<p class="mu">Evidence</p>'+r.sources.map(m=>card(m)).join(''):'')};
-const run=(btn,el,fn)=>btn.onclick=async()=>{el.innerHTML='<p class="mu">Thinking…</p>';try{el.innerHTML=await fn()}catch(e){el.innerHTML=`<p class="pink">${E(e)}</p>`}};
-run($('#qb'),$('#qa'),()=>answer($('#q').value));$('#q').onkeydown=e=>e.key=='Enter'&&$('#qb').click();run($('#fg'),$('#fo'),()=>answer($('#fq').value));$('#fq').onkeydown=e=>e.key=='Enter'&&$('#fg').click();
-const opts=(el,l,v)=>{const k=el.value;el.innerHTML=`<option value="">${l}</option>`+v.map(x=>`<option>${E(x)}</option>`).join('');el.value=k};
-async function tl(){const q=new URLSearchParams({app:$('#fa').value,person:$('#fpe').value,project:$('#fj').value,days:$('#fd').value});[...q.keys()].forEach(k=>!q.get(k)&&q.delete(k));
-const all=await api('/memories'),u=a=>[...new Set(a)].filter(Boolean).sort();opts($('#fa'),'All apps',u(all.map(m=>m.app)));opts($('#fpe'),'All people',u(all.flatMap(m=>m.people)));opts($('#fj'),'All projects',u(all.map(m=>m.project)));opts($('#bp'),'Choose a person…',u(all.flatMap(m=>m.people)));opts($('#ag'),'No goal',u(all.map(m=>m.project)));
-const r=await api('/memories?'+q);$('#tlo').innerHTML=r.map(m=>card(m,1)).join('')||'<p class="mu">Nothing yet. Capture, add a memory, or record a meeting.</p>'}
-['#fa','#fpe','#fj','#fd'].forEach(s=>$(s).onchange=tl);
-$('#ma').onclick=async()=>{if(!$('#mc').value.trim())return;await api('/memories',{b:{content:$('#mc').value,project:$('#mj').value||null}});$('#mc').value='';tl()};
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.dataset.i;try{
-if(b.dataset.a=='rm'&&confirm('Delete this memory?'))await api('/memories/'+id,{m:'DELETE'});if(b.dataset.a=='od')await api('/memories/'+id,{m:'PATCH',b:{status:b.dataset.s=='outdated'?'current':'outdated'}});
-if(b.dataset.a=='ed'){const v=prompt('Correct this memory:');if(v)await api('/memories/'+id,{m:'PATCH',b:{content:v}})}tl()}catch(x){alert(x)}});
-
-// ---- screen capture: on-device OCR of changed frames; only text leaves the browser
-let cs=null,ct=null,prev=null,worker=null;
-const sig=(c)=>{const t=document.createElement('canvas');t.width=32;t.height=18;t.getContext('2d').drawImage(c,0,0,32,18);return t.getContext('2d').getImageData(0,0,32,18).data};
-$('#cs').onclick=async()=>{try{cs=await navigator.mediaDevices.getDisplayMedia({video:true});}catch(e){$('#cst').textContent='Permission denied.';return}
-const v=document.createElement('video');v.srcObject=cs;await v.play();const label=(cs.getVideoTracks()[0].label||'Screen').slice(0,60);$('#cst').textContent='Capturing: '+label;
-worker=worker||await Tesseract.createWorker('eng');const c=document.createElement('canvas');
-cs.getVideoTracks()[0].onended=()=>$('#cx').click();
-ct=setInterval(async()=>{c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const s=sig(c);let d=0;if(prev)for(let i=0;i<s.length;i+=4)d+=Math.abs(s[i]-prev[i]);
-if(prev&&d<2000)return;prev=s;const{data}=await worker.recognize(c);const txt=data.text.replace(/\s+/g,' ').trim();if(txt.length<25)return;
-try{const m=await api('/capture',{b:{text:txt.slice(0,3000),app:/chrome|edge|firefox|safari/i.test(label)?'Browser':label.split(/[-—–|]/).pop().trim()||'Screen',window:label,project:$('#cj').value||null}});$('#clog').insertAdjacentHTML('afterbegin',card(m))}catch(e){}},Math.max(2,+$('#ci').value)*1000)};
-$('#cx').onclick=()=>{clearInterval(ct);cs&&cs.getTracks().forEach(t=>t.stop());cs=null;prev=null;$('#cst').textContent='Stopped.'};
-
-// ---- meetings
-let mid=null,ws=null,rec=null;
-function sock(){return new Promise(r=>{ws=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host+'/ws/meeting/'+mid+'?token='+encodeURIComponent(T));ws.onopen=r;
-ws.onmessage=e=>{const d=JSON.parse(e.data),a=d.analysis;$('#mco').insertAdjacentHTML('afterbegin',[...a.commitments.map(c=>`<div class="mem"><b class="good">${E(c.who)}</b> → ${E(c.what)} <span class="pink">${E(c.deadline_text||'no deadline')}</span></div>`),...a.decisions.map(x=>`<div class="mem">Decision: ${E(x)}</div>`),...a.tentative.map(x=>`<div class="mem mu">Tentative: ${E(x)}</div>`),...a.questions.map(x=>`<div class="mem mu">Open question: ${E(x)}</div>`)].join(''))}})}
-$('#mst').onclick=async()=>{mid=(await api('/meetings',{b:{title:$('#mti').value,project:$('#mpj').value||null}})).id;await sock();$('#mtr').innerHTML='';$('#mco').innerHTML='';$('#msm').innerHTML='<p class="good">Meeting started.</p>'};
-const say=(sp,t)=>{if(!ws||ws.readyState!=1){alert('Start a meeting first');return}$('#mtr').insertAdjacentHTML('beforeend',`<div class="mu"><b>${E(sp)}:</b> ${E(t)}</div>`);ws.send(JSON.stringify({speaker:sp,text:t}))};
-$('#mse').onclick=()=>{if($('#mx').value.trim()){say($('#msp').value||'You',$('#mx').value);$('#mx').value=''}};$('#mx').onkeydown=e=>e.key=='Enter'&&$('#mse').click();
-$('#mic').onclick=()=>{const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){alert('Speech recognition needs Chrome or Edge.');return}if(rec){rec.stop();rec=null;$('#mic').textContent='🎙 Mic';return}
-rec=new R();rec.continuous=true;rec.interimResults=false;rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)say($('#msp').value||'You',e.results[i][0].transcript.trim())};rec.onend=()=>{if(rec)rec.start()};rec.start();$('#mic').textContent='⏹ Stop mic'};
-$('#mfi').onclick=async()=>{if(!mid)return;rec&&$('#mic').click();const s=await api('/meetings/'+mid+'/finish',{b:{}});ws&&ws.close();const L=(a,f)=>a.length?'<ul>'+a.map(f).join('')+'</ul>':'<p class="mu">None.</p>';
-$('#msm').innerHTML=`<div class="mem"><h3>${E(s.title)} — summary</h3><p class="mu">${s.words} words · ${E(s.speakers.join(', '))}</p><b>Commitments</b>${L(s.commitments,c=>`<li>${E(c.who)}: ${E(c.what)} ${c.deadline_text?`(${E(c.deadline_text)})`:''}</li>`)}<b>Decisions</b>${L(s.decisions,x=>`<li>${E(x)}</li>`)}<b>Unresolved questions</b>${L(s.questions,x=>`<li>${E(x)}</li>`)}<b>Tentative</b>${L(s.tentative,x=>`<li>${E(x)}</li>`)}</div>`;mid=null;tl()};
-
-// ---- brief + alerts
-run($('#bb'),$('#bo'),async()=>{const p=$('#bp').value;if(!p)return'<p class="mu">Choose a person.</p>';const b=await api('/brief/'+encodeURIComponent(p));const L=(a,f)=>a.length?'<ul>'+a.map(f).join('')+'</ul>':'<p class="mu">None.</p>';
-return `<div class="mem"><h3>${E(b.person)}</h3><p><b>Projects:</b> ${E(b.projects.join(', ')||'—')}</p><b>Previous conversations</b>${L(b.conversations,m=>`<li>${E(m.content)} <span class="mu">(${E(m.app)}, ${dd(m.ts)})</span></li>`)}<b>Outstanding commitments</b>${L(b.commitments,m=>`<li>${E(m.content)} ${m.due?`<span class="pink">due ${dd(m.due)}</span>`:''}</li>`)}<b>Latest status</b>${L(Object.entries(b.status),([k,v])=>`<li>${E(k)}: ${E(v)}</li>`)}<b>Questions</b>${L(b.questions,x=>`<li>${E(x)}</li>`)}<button class="btn p s" onclick="draft('${E(p).replace(/'/g,'')}')">Draft follow-up</button><div id="dr"></div></div>`});
-window.draft=async p=>{const d=await api('/draft/'+encodeURIComponent(p),{b:{}});$('#dr').innerHTML=`<div class="mem"><div class="mu">${E(d.note)}</div><b>${E(d.subject)}</b><pre>${E(d.body)}</pre><a class="btn s" style="text-decoration:none" href="mailto:?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}">Open in mail app</a></div>`};
-async function alerts(){const g=$('#ag').value,q=new URLSearchParams({threshold:$('#ath').value});if(g)q.set('goal',g);const r=await api('/alerts?'+q);
-$('#ao').innerHTML=r.map(c=>`<div class="mem">${E(c.memory.content)}<div class="meta"><span class="tag ${c.notify?'':'k'}">${c.known?'KNOWN':c.notify?'NOTIFY':'SUPPRESS'}</span><span>score ${c.score}</span><span>relevance ${c.rel}</span><span>urgency ${c.urg}</span><span>due ${dd(c.memory.due)}</span><button class="btn g s" onclick="dismissA(${c.memory.id})">Dismiss</button></div></div>`).join('')||'<p class="mu">No upcoming deadlines.</p>'}
-window.dismissA=async id=>{await api('/alerts/'+id+'/dismiss',{b:{}});alerts()};$('#ar').onclick=alerts;
-function live(){const w=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host+'/ws/live?token='+encodeURIComponent(T));w.onmessage=e=>{const c=JSON.parse(e.data),el=document.createElement('div');el.className='toast';
-el.innerHTML=`<b class="good">Heads up · due ${dd(c.memory.due)}</b><p style="margin:6px 0">${E(c.memory.content)}</p><button class="btn s" data-x="1">${E(c.action)}</button> <button class="btn g s" data-d="1">Dismiss</button>`;$('#toasts').append(el);
-el.querySelector('[data-d]').onclick=async()=>{await api('/alerts/'+c.memory.id+'/dismiss',{b:{}});el.remove()};el.querySelector('[data-x]').onclick=()=>{el.remove();const p=c.memory.people[0];if(p){$('[data-t=br]').click();$('#bp').value=p;$('#bb').click()}}};w.onclose=()=>setTimeout(()=>T&&live(),5000)}
-
-$('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('.tabs button,.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.t).classList.add('on');if(b.dataset.t=='tl')tl();if(b.dataset.t=='al')alerts()};
-const fp=$('#fp');$('#fb').onclick=()=>{fp.classList.toggle('on');fp.classList.contains('on')&&$('#fq').focus()};let lc=0;
-addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()=='k'){e.preventDefault();$('#fb').click()}if(e.key=='Control'&&!e.repeat){if(Date.now()-lc<400)$('#fb').click();lc=Date.now()}if(e.key=='Escape')fp.classList.remove('on')});
-function boot(){$('#auth').style.display='none';$('#app').style.display='block';tl();live()}
-if(T)api('/memories').then(()=>boot()).catch(()=>{});
-</script></body></html>
+<section class="final"><div class="w"><h2>Try it on your next call</h2><p class="sub" style="margin:0 auto 28px">Create a free account and have your commitments written down before the call ends.</p><a class="btn" href="/app.html">Open Futurehuman</a></div></section>
+<footer><div class="w">© 2026 Futurehuman</div></footer>
+<script>document.getElementById('wt').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#wt button,.scr').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.getElementById(b.dataset.s).classList.add('on')}</script></body></html>

@@ -1,11 +1,21 @@
 import asyncio, os, json
 from typing import Optional
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from fastapi import FastAPI, Depends, HTTPException, Header, WebSocket, WebSocketDisconnect, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from . import core
 
-app = FastAPI(title="Futurehuman API", version="1.0")
+app = FastAPI(title="Futurehuman API", version="1.1")
+_api = core.RateLimiter(int(os.environ.get("FH_RATE", "120"))); _auth = core.RateLimiter(10)
+@app.middleware("http")
+async def limit(request: Request, call_next):
+    p = request.url.path
+    if p.startswith("/api/"):
+        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()) or (request.client.host if request.client else "?")
+        if not (_auth.allow(ip + "a") if p.startswith("/api/auth/") else _api.allow(ip)): return JSONResponse({"detail": "Too many requests"}, status_code=429)
+    r = await call_next(request); r.headers["X-Content-Type-Options"] = "nosniff"; r.headers["Referrer-Policy"] = "same-origin"; return r
 class Cred(BaseModel): email: str; password: str
 class Cap(BaseModel): text: str; app: str = "Screen"; window: str = ""; project: Optional[str] = None; people: Optional[list[str]] = None
 class MemIn(BaseModel): content: str; app: str = "Manual"; project: Optional[str] = None; people: Optional[list[str]] = None; due: Optional[float] = None
@@ -53,6 +63,10 @@ def draft(person: str, u=Depends(user)): return core.draft_email(u, person)
 def alerts(goal: str = None, focus: float = 0.3, threshold: float = None, u=Depends(user)): return core.candidates(u, goal, focus, threshold)
 @app.post("/api/alerts/{mid}/dismiss")
 def dis(mid: int, u=Depends(user)): core.dismiss(u, mid); return {"ok": True}
+@app.post("/api/alerts/{mid}/act")
+def act(mid: int, u=Depends(user)): core.act(u, mid); return {"ok": True}
+@app.get("/api/routines/morning")
+def morning(u=Depends(user)): return core.morning_brief(u)
 @app.post("/api/meetings")
 def mstart(m: Mt, u=Depends(user)): return {"id": core.start_meeting(u, m.title, m.project)}
 @app.post("/api/meetings/{mid}/chunk")

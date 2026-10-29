@@ -1,6 +1,6 @@
 """Futurehuman core engine (stdlib only): memory store, graph links, extraction,
 hybrid search, interruption scoring, meetings, briefs. FastAPI is a thin layer on top."""
-import os, re, json, time, sqlite3, hmac, hashlib, base64, secrets, urllib.request, datetime as dt
+import os, re, json, time, math, struct, sqlite3, hmac, hashlib, base64, secrets, urllib.request, datetime as dt
 
 DB_PATH = os.environ.get("FH_DB", "futurehuman.db")
 SECRET = os.environ.get("FH_SECRET", "dev-secret-change-me").encode()
@@ -25,6 +25,8 @@ def db():
         CREATE TABLE IF NOT EXISTS dismissed(uid INT, mid INT, UNIQUE(uid,mid));
         CREATE TABLE IF NOT EXISTS meetings(id INTEGER PRIMARY KEY, uid INT, title TEXT, project TEXT, started REAL, ended REAL, summary TEXT);
         CREATE TABLE IF NOT EXISTS chunks(id INTEGER PRIMARY KEY, mid INT, speaker TEXT, text TEXT, ts REAL);
+        CREATE TABLE IF NOT EXISTS vecs(mid INTEGER PRIMARY KEY, v BLOB);
+        CREATE TABLE IF NOT EXISTS feedback(uid INT, mid INT, action TEXT, ts REAL);
         CREATE VIRTUAL TABLE IF NOT EXISTS mfts USING fts5(content, people, project, app);
         """)
         _conns[DB_PATH] = c
@@ -109,7 +111,7 @@ def llm_extract(text):
 
 # ---------- memory ----------
 def _row(r):
-    d = dict(r); d["people"] = json.loads(d["people"] or "[]"); d.pop("chash", None); d.pop("r", None)
+    d = dict(r); d["people"] = json.loads(d["people"] or "[]"); d.pop("chash", None); d.pop("r", None); d.pop("vb", None)
     d["links"] = [x["b"] for x in db().execute("SELECT b FROM links WHERE a=?", (d["id"],))]; return d
 
 def add_memory(uid, content, app="Manual", window="", project=None, people=None, due=None, kind="context", conf=0.85, ts=None, source=None):
@@ -128,6 +130,7 @@ def add_memory(uid, content, app="Manual", window="", project=None, people=None,
         (uid, content, app, window, ts, json.dumps(people), project, due, conf, kind, sess, source, h))
     mid = cur.lastrowid
     db().execute("INSERT INTO mfts(rowid,content,people,project,app) VALUES(?,?,?,?,?)", (mid, content, " ".join(people), project or "", app))
+    _store_vec(mid, content + " " + " ".join(people) + " " + (project or ""))
     n = 0
     for r in db().execute("SELECT id,people,project FROM memories WHERE uid=? AND id!=? AND status='current' ORDER BY ts DESC LIMIT 200", (uid, mid)):
         if n < 4 and ((project and r["project"] == project) or set(people) & set(json.loads(r["people"] or "[]"))):
@@ -143,14 +146,14 @@ def update(uid, mid, content=None, status=None, project=None):
     if not m: return None
     if content is not None:
         db().execute("UPDATE memories SET content=? WHERE id=?", (content, mid))
-        db().execute("DELETE FROM mfts WHERE rowid=?", (mid,)); db().execute("INSERT INTO mfts(rowid,content,people,project,app) VALUES(?,?,?,?,?)", (mid, content, " ".join(m["people"]), m["project"] or "", m["app"]))
+        db().execute("DELETE FROM mfts WHERE rowid=?", (mid,)); db().execute("INSERT INTO mfts(rowid,content,people,project,app) VALUES(?,?,?,?,?)", (mid, content, " ".join(m["people"]), m["project"] or "", m["app"])); _store_vec(mid, content + " " + " ".join(m["people"]))
     if status in ("current", "outdated"): db().execute("UPDATE memories SET status=? WHERE id=?", (status, mid))
     if project is not None: db().execute("UPDATE memories SET project=? WHERE id=?", (project, mid))
     db().commit(); return get(uid, mid)
 
 def delete(uid, mid):
     if not get(uid, mid): return False
-    db().execute("DELETE FROM memories WHERE id=?", (mid,)); db().execute("DELETE FROM mfts WHERE rowid=?", (mid,)); db().execute("DELETE FROM links WHERE a=? OR b=?", (mid, mid))
+    db().execute("DELETE FROM memories WHERE id=?", (mid,)); db().execute("DELETE FROM mfts WHERE rowid=?", (mid,)); db().execute("DELETE FROM vecs WHERE mid=?", (mid,)); db().execute("DELETE FROM links WHERE a=? OR b=?", (mid, mid))
     db().commit(); return True
 
 def timeline(uid, app=None, person=None, project=None, days=0, limit=300):
@@ -158,21 +161,57 @@ def timeline(uid, app=None, person=None, project=None, days=0, limit=300):
     cut = time.time() - days * 86400
     return [m for m in rows if (not app or m["app"] == app) and (not person or person in m["people"]) and (not project or m["project"] == project) and (not days or m["ts"] >= cut)]
 
-def search(uid, q, k=8):
+# ---------- vectors (local hashed n-gram embeddings; swap for a hosted model/Qdrant later) ----------
+EMB_DIM = 256
+def embed(text, dim=EMB_DIM):
+    v = [0.0] * dim
+    for t in re.findall(r"[a-z0-9]+", text.lower()):
+        if t in STOP: continue
+        w = f"<{t}>"
+        for g in [w[i:i + 3] for i in range(len(w) - 2)] + [t]:
+            h = int(hashlib.md5(g.encode()).hexdigest()[:8], 16); v[h % dim] += 1 if (h >> 8) & 1 else -1
+    n = math.sqrt(sum(x * x for x in v)) or 1.0
+    return [x / n for x in v]
+def _blob(v): return struct.pack(f"{len(v)}f", *v)
+def _store_vec(mid, text): db().execute("INSERT OR REPLACE INTO vecs VALUES(?,?)", (mid, _blob(embed(text))))
+def _vsearch(uid, q, k):
+    qv = embed(q)
+    if not any(qv): return []
+    sc = []
+    for r in db().execute("SELECT m.*, v.v vb FROM memories m LEFT JOIN vecs v ON v.mid=m.id WHERE m.uid=? ORDER BY m.ts DESC LIMIT 2000", (uid,)).fetchall():
+        vb = r["vb"] or _blob(embed(r["content"]))
+        s = sum(a * b for a, b in zip(qv, struct.unpack(f"{len(vb)//4}f", vb)))
+        if s > 0.25: sc.append((s, r))
+    out = []
+    for s, r in sorted(sc, key=lambda x: -x[0])[:k]:
+        d = _row(r); d["via"] = "vector"; d["_s"] = s; out.append(d)
+    return out
+def _fts(uid, q, k):
     toks = [t for t in re.findall(r"[A-Za-z0-9]{3,}", q.lower()) if t not in STOP]
     if not toks: return []
-    try: rows = db().execute("SELECT m.*, bm25(mfts) r FROM mfts JOIN memories m ON m.id=mfts.rowid WHERE mfts MATCH ? AND m.uid=? ORDER BY r LIMIT ?", (" OR ".join(f'"{t}"' for t in toks), uid, k * 2)).fetchall()
+    try: rows = db().execute("SELECT m.*, bm25(mfts) r FROM mfts JOIN memories m ON m.id=mfts.rowid WHERE mfts MATCH ? AND m.uid=? ORDER BY r LIMIT ?", (" OR ".join(f'"{t}"' for t in toks), uid, k)).fetchall()
     except sqlite3.OperationalError: return []
-    out = {}
-    for r in rows:
-        age = (time.time() - r["ts"]) / 86400; sc = -r["r"] + 0.5 / (1 + age)
-        if r["status"] == "outdated": sc *= 0.4
-        d = _row(r); d["score"] = round(sc, 3); d["via"] = "text"; out[r["id"]] = d
-    for top in sorted(out.values(), key=lambda x: -x["score"])[:2]:  # graph expansion
+    out = []
+    for r in rows: d = _row(r); d["via"] = "text"; d["_s"] = -r["r"]; out.append(d)
+    return out
+def search(uid, q, k=8):
+    """Hybrid retrieval: normalised BM25 (70%) + vector cosine (30%), then graph expansion."""
+    fused = {}; w = {"text": 0.7, "vector": 0.3}
+    for lst in (_fts(uid, q, k * 2), _vsearch(uid, q, k * 2)):
+        mx = max([d["_s"] for d in lst] or [1]) or 1
+        for d in lst:
+            f = fused.setdefault(d["id"], {**d, "score": 0.0})
+            f["score"] += w[d["via"]] * (d["_s"] / mx if d["via"] == "text" else d["_s"])
+            if f["via"] != d["via"]: f["via"] = "hybrid"
+    for f in fused.values():
+        f.pop("_s", None); f["score"] += 0.02 / (1 + (time.time() - f["ts"]) / 86400)
+        if f["status"] == "outdated": f["score"] *= 0.4
+        f["score"] = round(f["score"], 4)
+    for top in sorted(fused.values(), key=lambda x: -x["score"])[:2]:
         for lid in top["links"]:
-            n = get(uid, lid) if lid not in out else None
-            if n: n["score"] = round(top["score"] * 0.5, 3); n["via"] = "graph"; out[lid] = n
-    return sorted(out.values(), key=lambda x: -x["score"])[:k]
+            n = get(uid, lid) if lid not in fused else None
+            if n: n["score"] = round(top["score"] * 0.5, 4); n["via"] = "graph"; fused[lid] = n
+    return sorted(fused.values(), key=lambda x: -x["score"])[:k]
 
 def ask(uid, q):
     res = search(uid, q)
@@ -186,19 +225,25 @@ def ask(uid, q):
     return {"answer": ans, "sources": res, "progress": prog}
 
 # ---------- proactive ----------
-def score(rel, urg, conf, overhead): return round(rel * urg * conf / max(overhead, 1.0), 3)  # blueprint formula
+def score(rel, urg, conf, overhead): return round(rel * urg * conf / max(overhead, 0.8), 3)  # blueprint formula
+def learned_adjust(uid):
+    """Lightweight on-device personalisation: many dismissals raise the interruption bar, acting on alerts lowers it."""
+    rows = db().execute("SELECT action, count(*) c FROM feedback WHERE uid=? AND ts>? GROUP BY action", (uid, time.time() - 30 * 86400)).fetchall()
+    n = {r["action"]: r["c"] for r in rows}; d, a = n.get("dismiss", 0), n.get("act", 0)
+    return round(((d + 1) / (d + a + 2) - 0.5) * 1.0, 3)
 def candidates(uid, goal=None, focus=0.3, threshold=None):
     th = THRESHOLD if threshold is None else threshold; now = time.time(); out = []
-    dis = {r["mid"] for r in db().execute("SELECT mid FROM dismissed WHERE uid=?", (uid,))}
+    dis = {r["mid"] for r in db().execute("SELECT mid FROM dismissed WHERE uid=?", (uid,))}; adj = learned_adjust(uid)
     for m in timeline(uid):
         if not m["due"] or m["status"] != "current" or m["due"] < now: continue
         rel = 0.6 if not goal else (1.0 if m["project"] == goal else 0.4)
         urg = max(0.0, min(1.0, 1 - (m["due"] - now) / (7 * 86400)))
-        s = score(rel, urg, m["conf"], 1 + focus * 0.5)
+        s = score(rel, urg, m["conf"], 1 + focus * 0.5 + adj)
         out.append({"memory": m, "score": s, "rel": rel, "urg": round(urg, 2), "known": m["id"] in dis, "notify": s >= th and m["id"] not in dis,
                     "action": "Draft a follow-up" if m["people"] else "Create a reminder"})
     return sorted(out, key=lambda x: -x["score"])
-def dismiss(uid, mid): db().execute("INSERT OR IGNORE INTO dismissed VALUES(?,?)", (uid, mid)); db().commit()
+def dismiss(uid, mid): db().execute("INSERT OR IGNORE INTO dismissed VALUES(?,?)", (uid, mid)); db().execute("INSERT INTO feedback VALUES(?,?,?,?)", (uid, mid, "dismiss", time.time())); db().commit()
+def act(uid, mid): db().execute("INSERT OR IGNORE INTO dismissed VALUES(?,?)", (uid, mid)); db().execute("INSERT INTO feedback VALUES(?,?,?,?)", (uid, mid, "act", time.time())); db().commit()
 
 # ---------- meetings ----------
 def start_meeting(uid, title, project=None):
@@ -231,3 +276,22 @@ def draft_email(uid, person):
     b = brief(uid, person); c = b["commitments"][0]["content"] if b["commitments"] else "our last conversation"
     c = re.sub(r"^Email from [^:]+: ", "", c)
     return {"subject": f"Following up — {b['projects'][0] if b['projects'] else 'our conversation'}", "body": f"Hi {person.split()[0]},\n\nFollowing up on: {c}\nI'll share the update shortly. Happy to walk through it on a call.\n\nBest", "note": "Review before sending. Futurehuman never sends automatically."}
+
+# ---------- routines ----------
+def morning_brief(uid):
+    now = time.time(); ms = [m for m in timeline(uid) if m["status"] == "current"]; sec = {}
+    for m in sorted([m for m in ms if m["due"]], key=lambda m: m["due"]):
+        if m["due"] < now - 86400: continue
+        sec.setdefault(m["project"] or "General", []).append({"id": m["id"], "text": m["content"], "due": m["due"], "overdue": m["due"] < now, "people": m["people"]})
+    yday = [m for m in ms if now - m["ts"] < 86400]
+    return {"date": dt.date.today().isoformat(), "sections": [{"project": k, "items": v} for k, v in sec.items()], "captured_last_24h": len(yday),
+            "apps": sorted({m["app"] for m in yday})}
+
+# ---------- rate limiting ----------
+class RateLimiter:
+    def __init__(self, limit, window=60): self.limit, self.window, self.h = limit, window, {}
+    def allow(self, key):
+        now = time.time(); q = [t for t in self.h.get(key, []) if now - t < self.window]
+        ok = len(q) < self.limit
+        if ok: q.append(now)
+        self.h[key] = q; return ok

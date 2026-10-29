@@ -28,4 +28,13 @@ class T(unittest.TestCase):
     def test_dedupe_and_brief(self):
         a = core.add_memory(self.u, "Same screen text", "Chrome"); b = core.add_memory(self.u, "Same screen text", "Chrome"); self.assertEqual(a["id"], b["id"])
         core.add_memory(self.u, "Ravi asked about pricing", "Slack"); self.assertEqual(core.brief(self.u, "Ravi")["person"], "Ravi"); self.assertIn("Hi Ravi", core.draft_email(self.u, "Ravi")["body"])
+    def test_vector_hybrid_and_rate_and_learning(self):
+        m = core.add_memory(self.v, "Invoice due next month for Acme", "Gmail"); r = core.search(self.v, "invoicing")
+        self.assertTrue(r and r[0]["id"] == m["id"] and r[0]["via"] in ("vector", "hybrid"))
+        rl = core.RateLimiter(3, 60); self.assertEqual([rl.allow("x") for _ in range(4)], [True, True, True, False])
+        base = core.add_memory(self.v, "Send Kim the audit by tomorrow", "Gmail", project="P", people=["Kim"], due=time.time() + 3600 * 12)
+        s0 = core.candidates(self.v, "P", 0)[0]["score"]
+        for i in range(6): x = core.add_memory(self.v, f"Noise task {i} due tomorrow", "Gmail", project="P", due=time.time() + 86400); core.dismiss(self.v, x["id"])
+        s1 = [c for c in core.candidates(self.v, "P", 0) if c["memory"]["id"] == base["id"]][0]["score"]; self.assertLess(s1, s0)
+        mb = core.morning_brief(self.v); self.assertTrue(mb["sections"] and mb["sections"][0]["project"] == "P")
 if __name__ == "__main__": unittest.main()

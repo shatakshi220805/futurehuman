@@ -1,0 +1,15 @@
+# Free-plan blueprint. Free web services have an ephemeral filesystem: SQLite data resets on redeploy, restart or spin-down.
+services:
+  - type: web
+    name: futurehuman
+    runtime: docker
+    plan: free
+    autoDeployTrigger: commit
+    healthCheckPath: /healthz
+    envVars:
+      - key: FH_SECRET
+        generateValue: true
+      - key: FH_DB
+        value: /tmp/futurehuman.db
+      - key: ANTHROPIC_API_KEY
+        sync: false
