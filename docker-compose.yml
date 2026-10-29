@@ -1,0 +1,8 @@
+services:
+  futurehuman:
+    build: .
+    ports: ["8000:8000"]
+    env_file: .env
+    volumes: ["fhdata:/data"]
+    restart: unless-stopped
+volumes: {fhdata: {}}
